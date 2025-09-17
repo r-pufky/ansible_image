@@ -1,0 +1,13 @@
+---
+###############################################################################
+# Image Install
+###############################################################################
+#
+# Args:
+#   image_default_packages: list of packages for Image install.
+
+- name: 'install | install'
+  ansible.builtin.apt:
+    name:  '{{ image_default_packages }}'
+    state: 'latest'
+    update_cache: true

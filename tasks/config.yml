@@ -1,0 +1,44 @@
+---
+###############################################################################
+# Image Configuration
+###############################################################################
+# Process per config configuration settings.
+#
+# Args:
+#   name: string name of config to setup.
+#   config: dict user section of image_config.
+#
+# Generates:
+#   _image_server: str (user@server).
+#   _image_local: ansible.builtin.stat results for local directory.
+#   _image_tar_target: str tar local file tarball creation target.
+#   _image_cron_tar: str constructed tar command to create archive.
+#   _image_cron_push: str constructed tar command to push archive to server.
+#   _image_scp_command: str scp base command logging only error messages.
+#   _image_ssh_command: str ssh base command logging only error messages.
+
+- name: '{{ name }} | parse config'
+  ansible.builtin.set_fact:
+    _image_tar_exclude: ''
+    _image_tar_target:  '/tmp/${TIMESTAMP}.tar.xz'
+    _image_server:      '{{ config.user }}@{{ config.server }}'
+    _image_tar_date:    'TIMESTAMP=`date {{ image_default_date_format }}`'
+    _image_scp_command: '/usr/bin/scp -o LogLevel=Error'
+    _image_ssh_command: '/usr/bin/ssh -q'
+    _image_tar_command: '/bin/tar cJ'
+
+- name: '{{ name }} | parse excludes'
+  ansible.builtin.set_fact:
+    _image_tar_exclude: '{{ _image_tar_exclude }} --exclude="{{ item }}"'
+  loop: '{{ config.exclude }}'
+  when: config.exclude|length > 0
+
+- name: '{{ name }} | set cron options'
+  ansible.builtin.set_fact:
+    _image_cron_tar: '{{ _image_tar_date }} && pushd "{{ config.local }}" &>/dev/null && {{ _image_tar_command }} {{ _image_tar_exclude }} -f "{{ _image_tar_target }}" . && popd &>/dev/null'
+    _image_cron_push: '{{ _image_scp_command }} "{{ _image_tar_target }}" {{ _image_server }}:"{{ config.remote }}" &>/dev/null'
+
+- name: '{{ name }} | check local directory'
+  ansible.builtin.stat:
+    path: '{{ config.local }}'
+  register: _image_local

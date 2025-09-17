@@ -1,0 +1,13 @@
+#!/bin/bash
+#
+# Run image sync job for {{ name }}.
+#
+
+set -e
+
+TIMESTAMP=`date {{ image_default_date_format }}`
+
+pushd "{{ config.local }}" &>/dev/null
+{{ _image_tar_command }} {{ _image_tar_exclude }} -f "{{ _image_tar_target }}" .
+popd &>/dev/null
+{{ _image_scp_command }} "{{ _image_tar_target }}" {{ _image_server }}:"{{ config.remote }}" &>/dev/null && rm "{{ _image_tar_target }}"

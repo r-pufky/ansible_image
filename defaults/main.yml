@@ -1,0 +1,32 @@
+---
+###############################################################################
+# Image Role Configuration
+###############################################################################
+# Users are not checked for existence by the role. This role should be applied
+# after any configuration for users & SSH configuration is applied.
+
+# Restore the latest backup if 'local' location is not found?
+image_auto_restore: false
+
+# Configuration of image sync jobs. Defined per job name. Tarball is created
+# from the local directory and automatically qouted.
+#
+# image_config:
+#   {JOB}:
+#     user:    str username to create archive, ssh/scp to server, create perms.
+#     group:   str group for user.
+#     mode:    str mode to set for local directory if non-existant.
+#     server:  str server to ssh/scp to. Do not include port.
+#     remote:  str remote server full path (no trailing /) to sync to.
+#     local:   str local server full path (no trailing /) to sync to.
+#     # Relative to local directory; use tar exclude expressions.
+#     exclude: []
+#     # Use ansible.builtin.cron, either special_time or settings exclusively.
+#     cron:
+#       month:   '*'
+#       weekday: '*'
+#       day:     '*'
+#       hour:    '*'
+#       minute:  '*'
+#       special_time: 'weekly'
+image_config: {}

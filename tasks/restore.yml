@@ -1,0 +1,50 @@
+---
+###############################################################################
+# Image Restore
+###############################################################################
+# Restore an image using the latest dated file.
+#
+# Args:
+#   name: string name of config to setup.
+#   config: dict user section of image_config.
+#   _image_server: str server base string (user@server).
+#   _image_scp_command: str scp base command logging only error messages.
+#   _image_ssh_command: str ssh base command logging only error messages.
+
+- name: 'restore | determine latest backup' # noqa no-changed-when always execute
+  ansible.builtin.command: "{{ _image_ssh_command }} {{ _image_server }} 'ls -1 {{ config.remote }}/*.tar.xz | sort | tail -1'"
+  become: true
+  become_user: '{{ config.user }}'
+  # Reference: https://github.com/ansible/ansible/issues/16048#issuecomment-229012509
+  vars:
+    ansible_ssh_pipelining: true
+  register: _image_restore_file
+
+# Shell required for appropriate qouting of timestamp HH:MM:SS.tar.xz
+- name: 'restore | stage backup to local machine' # noqa no-changed-when always execute
+  ansible.builtin.command: '{{ _image_scp_command }} {{ _image_server }}:"{{ _image_restore_file.stdout|quote }}" "/tmp/image_{{ name }}.tar.xz"'
+  become: true
+  become_user: '{{ config.user }}'
+  # Reference: https://github.com/ansible/ansible/issues/16048#issuecomment-229012509
+  vars:
+    ansible_ssh_pipelining: true
+
+- name: 'restore | set restore directory'
+  ansible.builtin.file:
+    path:  '{{ config.local }}'
+    owner: '{{ config.user }}'
+    group: '{{ config.group }}'
+    mode:  '{{ config.mode }}'
+    state: 'directory'
+
+- name: 'restore | extract backup'
+  ansible.builtin.unarchive:
+    src:        '/tmp/image_{{ name }}.tar.xz'
+    remote_src: true
+    dest:       '{{ config.local }}/'
+    extra_opts: '{{ image_default_tar_options }}'
+
+- name: 'restore | cleanup'
+  ansible.builtin.file:
+    path:  '/tmp/image_{{ name }}.tar.xz'
+    state: 'absent'

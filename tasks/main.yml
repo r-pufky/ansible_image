@@ -1,0 +1,11 @@
+---
+- ansible.builtin.import_tasks: install.yml
+
+- ansible.builtin.include_tasks: sync.yml
+  vars:
+    name:   '{{ _image_config.key }}'
+    config: '{{ _image_config.value }}'
+  loop: '{{ image_config|default({})|dict2items }}'
+  loop_control:
+    loop_var: _image_config
+  no_log: true # user password

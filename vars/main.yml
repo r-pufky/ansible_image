@@ -1,0 +1,15 @@
+---
+###############################################################################
+# Default Image Package Dependencies
+###############################################################################
+# Default required packages for image install.
+
+image_default_packages:
+  - 'ssh'
+  - 'tar'
+  - 'xz-utils'
+
+image_default_date_format: '+%F_%T'
+
+image_default_tar_options:
+  - '--strip-components=1'

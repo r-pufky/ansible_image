@@ -1,0 +1,63 @@
+---
+###############################################################################
+# Image Sync Configuration
+###############################################################################
+# Set initial image sync job per user. As this is an imaging only role, the
+# target directory is left for other roles to create/modify, outside of
+# restoring if enabled.
+#
+# Args:
+#   name: string name of config to setup.
+#   config: dict user section of image_config.
+#   _image_local: ansible.builtin.stat results for local directory.
+#   _image_tar_target: str tar local file tarball creation target.
+#   _image_server: str connect base string (user@server).
+#   _image_tar_exclude: str list of --exclude options or empty.
+
+- ansible.builtin.include_tasks: config.yml
+
+- name: '{{ name }} | confirm user exists'
+  ansible.builtin.getent:
+    database: 'passwd'
+    key:      '{{ config.user }}'
+  register: _image_user
+
+- name: '{{ name }} | determine user home directory'
+  ansible.builtin.set_fact:
+    _image_cron_sync: '{{ _image_user.ansible_facts.getent_passwd[config.user][-2] }}/{{ name }}_cron_sync'
+
+- name: '{{ name }} | restoring from latest backup'
+  ansible.builtin.include_tasks: restore.yml
+  when: not _image_local.stat.exists and image_auto_restore
+
+- name: '{{ name }} | set cron sync file'
+  ansible.builtin.template:
+    src:   'cron_sync.j2'
+    dest:  '{{ _image_cron_sync }}'
+    owner: '{{ config.user }}'
+    group: '{{ config.group }}'
+    mode:  0500
+
+- name: '{{ name }} | set standard scheduling sync'
+  ansible.builtin.cron:
+    name:      'image {{ name }} sync'
+    month:     '{{ config.cron.month|default("*") }}'
+    weekday:   '{{ config.cron.weekday|default("*") }}'
+    day:       '{{ config.cron.day|default("*") }}'
+    hour:      '{{ config.cron.hour|default("*") }}'
+    minute:    '{{ config.cron.minute|default("*") }}'
+    user:      '{{ config.user }}'
+    job:       '{{ _image_cron_sync }}'
+    cron_file: 'image_{{ name }}_sync'
+    state:     'present'
+  when: config.cron.special_time is not defined
+
+- name: '{{ name }} | set special time sync'
+  ansible.builtin.cron:
+    name:         'image {{ name }} sync'
+    special_time: '{{ config.cron.special_time }}'
+    user:         '{{ config.user }}'
+    job:          '{{ _image_cron_sync }}'
+    cron_file:    'image_{{ name }}_sync'
+    state:        'present'
+  when: config.cron.special_time is defined
